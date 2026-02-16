@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختر المستوى - شمس وقمر</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="levels-page">
+        <h1 class="page-title">🌟 اختر مستوى التحدي 🌟</h1>
+        
+        <div class="levels-grid" id="levelsGrid">
+            <!-- المستويات ستتم إضافتها بواسطة JavaScript -->
+        </div>
+        
+        <div class="back-btn-container">
+            <a href="index.html" class="back-btn">🔙 العودة للرئيسية</a>
+        </div>
+    </div>
+
+    <script>
+        const levelsGrid = document.getElementById('levelsGrid');
+        
+        // إنشاء 20 مستوى
+        for (let i = 1; i <= 20; i++) {
+            const levelCard = document.createElement('div');
+            levelCard.className = 'level-card';
+            
+            // تحديد صعوبة المستوى
+            let difficulty = '';
+            let difficultyClass = '';
+            if (i <= 5) {
+                difficulty = 'سهل';
+                difficultyClass = 'easy';
+            } else if (i <= 10) {
+                difficulty = 'متوسط';
+                difficultyClass = 'medium';
+            } else if (i <= 15) {
+                difficulty = 'صعب';
+                difficultyClass = 'hard';
+            } else {
+                difficulty = 'خبير';
+                difficultyClass = 'expert';
+            }
+            
+            levelCard.innerHTML = `
+                <div class="level-number">${i}</div>
+                <div class="level-difficulty ${difficultyClass}">${difficulty}</div>
+                <div class="level-icon">${i <= 5 ? '🌱' : i <= 10 ? '🌿' : i <= 15 ? '🔥' : '👑'}</div>
+                <a href="game.html?mode=ai&level=${i}" class="play-level-btn">ابدأ التحدي</a>
+            `;
+            
+            levelsGrid.appendChild(levelCard);
+        }
+    </script>
+</body>
+</html>

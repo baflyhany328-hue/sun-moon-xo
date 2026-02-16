@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شمس وقمر - اللعب</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="game-page">
+    <div class="game-container">
+        <div class="game-header">
+            <h1>☀️ الشمس vs القمر 🌙</h1>
+            <div class="level-indicator" id="levelIndicator"></div>
+            <div class="game-mode-indicator" id="modeIndicator"></div>
+        </div>
+
+        <div class="players-info">
+            <div class="player" id="player1">
+                <span>☀️ الشمس</span>
+            </div>
+            <div class="player" id="player2">
+                <span>🌙 القمر</span>
+            </div>
+        </div>
+
+        <div class="score">
+            <div>الشمس: <span id="scoreX">0</span></div>
+            <div>القمر: <span id="scoreO">0</span></div>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="status" id="status">دور الشمس ☀️</div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="resetGame()">لعبة جديدة</button>
+            <button class="btn btn-danger" onclick="resetScore()">تصفير النقاط</button>
+            <a href="index.html" class="btn btn-secondary">الرئيسية</a>
+        </div>
+    </div>
+
+    <div class="music-control">
+        <span>🎵</span>
+        <button class="music-btn" onclick="toggleMusic()" id="musicBtn">🔊</button>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="winSound">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="clickSound">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // استخراج المعاملات من URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameMode = urlParams.get('mode') || '2players';
+        const aiLevel = parseInt(urlParams.get('level')) || 1;
+
+        // متغيرات اللعبة
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let scores = { X: 0, O: 0 };
+        let musicOn = true;
+        let gameDifficulty = aiLevel;
+
+        // عناصر DOM
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const scoreXElement = document.getElementById('scoreX');
+        const scoreOElement = document.getElementById('scoreO');
+        const player1Element = document.getElementById('player1');
+        const player2Element = document.getElementById('player2');
+        const levelIndicator = document.getElementById('levelIndicator');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const bgMusic = document.getElementById('bgMusic');
+        const winSound = document.getElementById('winSound');
+        const clickSound = document.getElementById('clickSound');
+        const musicBtn = document.getElementById('musicBtn');
+
+        // شروط الفوز
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        // تحديث المؤشرات
+        function updateIndicators() {
+            if (gameMode === '2players') {
+                modeIndicator.textContent = '👥 وضع اللعب مع صديق';
+                player2Element.classList.remove('ai');
+                levelIndicator.style.display = 'none';
+            } else {
+                modeIndicator.textContent = `🤖 وضع الذكاء الاصطناعي - المستوى ${aiLevel}`;
+                player2Element.classList.add('ai');
+                levelIndicator.textContent = `المستوى: ${aiLevel}/20`;
+                levelIndicator.style.display = 'inline-block';
+            }
+        }
+
+        // إنشاء الخلايا
+        function createBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', () => handleCellClick(i));
+                boardElement.appendChild(cell);
+            }
+        }
+
+        // تحديث عرض الخلايا
+        function updateBoard() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                if (board[index] === 'X') {
+                    cell.textContent = '☀️';
+                } else if (board[index] === 'O') {
+                    cell.textContent = '🌙';
+                } else {
+                    cell.textContent = '';
+                }
+            });
+        }
+
+        // التحقق من الفائز
+        function checkWinner() {
+            for (let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return board[a];
+                }
+            }
+            if (board.every(cell => cell !== '')) {
+                return 'tie';
+            }
+            return null;
+        }
+
+        // تحديث اللاعب النشط
+        function updateActivePlayer() {
+            if (currentPlayer === 'X') {
+                player1Element.classList.add('active');
+                player2Element.classList.remove('active');
+            } else {
+                player2Element.classList.add('active');
+                player1Element.classList.remove('active');
+            }
+        }
+
+        // تشغيل صوت النقر
+        function playClickSound() {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(e => console.log("لم يتم تشغيل الصوت"));
+        }
+
+        // معالجة نهاية اللعبة
+        function handleGameEnd(winner) {
+            if (winner === 'X') {
+                statusElement.textContent = 'فازت الشمس ☀️!';
+                scores.X++;
+                scoreXElement.textContent = scores.X;
+                highlightWinner('X');
+                winSound.play().catch(e => console.log("لم يتم تشغيل صوت الفوز"));
+            } else if (winner === 'O') {
+                statusElement.textContent = 'فاز القمر 🌙!';
+                scores.O++;
+                scoreOElement.textContent = scores.O;
+                highlightWinner('O');
+                winSound.play().catch(e => console.log("لم يتم تشغيل صوت الفوز"));
+            } else if (winner === 'tie') {
+                statusElement.textContent = 'تعادل!';
+            }
+            
+            gameActive = false;
+            
+            // تعطيل الخلايا
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.add('disabled');
+            });
+        }
+
+        // تحديد الخلايا الفائزة
+        function highlightWinner(winner) {
+            for (let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if (board[a] === winner && board[b] === winner && board[c] === winner) {
+                    const cells = document.querySelectorAll('.cell');
+                    cells[a].classList.add('winner');
+                    cells[b].classList.add('winner');
+                    cells[c].classList.add('winner');
+                    break;
+                }
+            }
+        }
+
+        // حركة الذكاء الاصطناعي حسب المستوى
+        function aiMove() {
+            if (!gameActive || currentPlayer !== 'O') return;
+
+            let emptyCells = board.reduce((acc, cell, index) => {
+                if (cell === '') acc.push(index);
+                return acc;
+            }, []);
+
+            if (emptyCells.length === 0) return;
+
+            let moveIndex;
+
+            // استراتيجيات مختلفة حسب المستوى
+            switch(true) {
+                case (aiLevel <= 5): // مستويات سهلة - حركات عشوائية
+                    moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    break;
+                    
+                case (aiLevel <= 10): // مستويات متوسطة - تمنع الفوز أحياناً
+                    // 70% فرصة لمنع الفوز
+                    if (Math.random() < 0.7) {
+                        moveIndex = findBestMove('O');
+                        if (moveIndex === null) moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    } else {
+                        moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    }
+                    break;
+                    
+                case (aiLevel <= 15): // مستويات صعبة - تحاول الفوز وتمنع الفوز
+                    moveIndex = findBestMove('O');
+                    if (moveIndex === null) {
+                        moveIndex = findBestMove('X');
+                    }
+                    if (moveIndex === null) {
+                        moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    }
+                    break;
+                    
+                default: // مستويات خبير - ذكاء متقدم
+                    moveIndex = findBestMove('O');
+                    if (moveIndex === null) {
+                        moveIndex = findBestMove('X');
+                    }
+                    if (moveIndex === null) {
+                        // تفضيل المركز والزوايا
+                        const preferredMoves = [4, 0, 2, 6, 8];
+                        for (let move of preferredMoves) {
+                            if (emptyCells.includes(move)) {
+                                moveIndex = move;
+                                break;
+                            }
+                        }
+                    }
+                    if (moveIndex === null) {
+                        moveIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    }
+            }
+
+            if (moveIndex !== undefined) {
+                setTimeout(() => {
+                    board[moveIndex] = 'O';
+                    playClickSound();
+                    updateBoard();
+                    
+                    const winner = checkWinner();
+                    if (winner) {
+                        handleGameEnd(winner);
+                    } else {
+                        currentPlayer = 'X';
+                        statusElement.textContent = 'دور الشمس ☀️';
+                        updateActivePlayer();
+                    }
+                }, 500); // تأخير لمحاكاة التفكير
+            }
+        }
+
+        // إيجاد أفضل حركة
+        function findBestMove(player) {
+            const emptyCells = board.reduce((acc, cell, index) => {
+                if (cell === '') acc.push(index);
+                return acc;
+            }, []);
+
+            for (let index of emptyCells) {
+                board[index] = player;
+                if (checkWinner() === player) {
+                    board[index] = '';
+                    return index;
+                }
+                board[index] = '';
+            }
+            return null;
+        }
+
+        // معالجة النقر على الخلية
+        function handleCellClick(index) {
+            if (!gameActive || board[index] !== '') return;
+            if (gameMode === 'ai' && currentPlayer === 'O') return; // منع اللعب أثناء دور الكمبيوتر
+
+            playClickSound();
+            board[index] = currentPlayer;
+            updateBoard();
+
+            const winner = checkWinner();
+            
+            if (winner) {
+                handleGameEnd(winner);
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                statusElement.textContent = currentPlayer === 'X' ? 'دور الشمس ☀️' : 'دور القمر 🌙';
+                updateActivePlayer();
+
+                // إذا كان الوضع ضد الكمبيوتر ودور الكمبيوتر
+                if (gameMode === 'ai' && currentPlayer === 'O' && gameActive) {
+                    aiMove();
+                }
+            }
+        }
+
+        // إعادة تعيين اللعبة
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            statusElement.textContent = 'دور الشمس ☀️';
+            
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.classList.remove('winner', 'disabled');
+            });
+            
+            updateBoard();
+            updateActivePlayer();
+        }
+
+        // إعادة تعيين النقاط
+        function resetScore() {
+            scores = { X: 0, O: 0 };
+            scoreXElement.textContent = '0';
+            scoreOElement.textContent = '0';
+            resetGame();
+        }
+
+        // تشغيل/إيقاف الموسيقى
+        function toggleMusic() {
+            musicOn = !musicOn;
+            if (musicOn) {
+                bgMusic.play();
+                musicBtn.textContent = '🔊';
+            } else {
+                bgMusic.pause();
+                musicBtn.textContent = '🔈';
+            }
+        }
+
+        // بدء اللعبة
+        createBoard();
+        updateIndicators();
+        updateActivePlayer();
+
+        // محاولة تشغيل الموسيقى
+        document.addEventListener('click', function initMusic() {
+            if (musicOn && bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("لم يتم تشغيل الموسيقى"));
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>

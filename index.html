@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شمس وقمر - الصفحة الرئيسية</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="welcome-page">
+    <div class="stars"></div>
+    
+    <div class="welcome-container">
+        <div class="sun-moon-animation">
+            <div class="sun">☀️</div>
+            <div class="moon">🌙</div>
+        </div>
+        
+        <h1 class="game-title">شمس وقمر</h1>
+        
+        <div class="creator-info">
+            <span class="bhr-logo">B.H.R</span>
+            <p class="creator-name">Bavly Hany Roushdy</p>
+        </div>
+        
+        <div class="menu-buttons">
+            <a href="game.html?mode=2players" class="menu-btn play-btn">
+                <span>👥</span> لعب مع صديق
+            </a>
+            <a href="levels.html" class="menu-btn ai-btn">
+                <span>🤖</span> لعب ضد الذكاء الاصطناعي
+            </a>
+        </div>
+        
+        <div class="game-description">
+            <p>🎮 لعبة XO المطورة مع مستويات متعددة تصل إلى 20 مستوى</p>
+        </div>
+    </div>
+
+    <script>
+        // إضافة النجوم المتحركة
+        function createStars() {
+            const starsContainer = document.querySelector('.stars');
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+        createStars();
+    </script>
+</body>
+</html>
